@@ -4,6 +4,7 @@ import com.company.ems.dto.LeaveRequestDTO;
 import com.company.ems.model.*;
 import com.company.ems.repository.*;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -11,7 +12,9 @@ import java.util.List;
 
 @Service
 public class LeaveRequestService {
-    private final LeaveRequestRepository leaveRequestRepository;
+    
+	@Autowired
+	private LeaveRequestRepository leaveRequestRepository;
     private final UserRepository userRepository;
 
     
@@ -22,7 +25,14 @@ public class LeaveRequestService {
 	}
 
 	public LeaveRequest applyLeave(LeaveRequestDTO dto, String username) {
-        User emp = userRepository.findByUsername(username).orElseThrow();
+        
+		List<LeaveRequest> overlappingLeaves = leaveRequestRepository.findOverlappingLeaves(
+		        username, LocalDate.parse(dto.getStartDate()), LocalDate.parse(dto.getEndDate())
+		    );
+		    if (!overlappingLeaves.isEmpty()) {
+		        throw new IllegalArgumentException("You have already applied for leave during these dates.");
+		    }
+		User emp = userRepository.findByUsername(username).orElseThrow();
         LeaveRequest req = new LeaveRequest();
         req.setEmployee(emp);
         req.setManager(emp.getManager());

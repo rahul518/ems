@@ -6,6 +6,8 @@ import java.time.LocalDate;
 
 @Entity
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class LeaveRequest {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

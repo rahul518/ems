@@ -3,7 +3,6 @@ package com.company.ems.service;
 import com.company.ems.dto.UserDTO;
 import com.company.ems.model.*;
 import com.company.ems.repository.*;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,18 +12,15 @@ public class UserService {
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
 
-    
-    
     public UserService(UserRepository userRepository, DepartmentRepository departmentRepository) {
-		super();
-		this.userRepository = userRepository;
-		this.departmentRepository = departmentRepository;
-	}
+        this.userRepository = userRepository;
+        this.departmentRepository = departmentRepository;
+    }
 
-	public User createUser(UserDTO dto) {
+    public User createUser(UserDTO dto) {
         User user = new User();
         user.setUsername(dto.getUsername());
-        user.setPassword(new BCryptPasswordEncoder().encode(dto.getPassword()));
+        user.setPassword(dto.getPassword()); // <-- Save plain password
         user.setFullName(dto.getFullName());
         user.setRole(dto.getRole());
         if (dto.getDepartmentId() != null) {
@@ -41,7 +37,7 @@ public class UserService {
     public User updateUser(Long id, UserDTO dto) {
         User user = userRepository.findById(id).orElseThrow();
         if (dto.getPassword() != null) {
-            user.setPassword(new BCryptPasswordEncoder().encode(dto.getPassword()));
+            user.setPassword(dto.getPassword()); // <-- Save plain password
         }
         user.setFullName(dto.getFullName());
         user.setRole(dto.getRole());

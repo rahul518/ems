@@ -1,42 +1,49 @@
 package com.company.ems.controller;
 
-import com.company.ems.dto.*;
-import com.company.ems.model.*;
-import com.company.ems.repository.UserRepository;
-import com.company.ems.security.JwtTokenProvider;
+import java.util.Map;
+import java.util.Optional;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.*;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.company.ems.dto.LoginRequest;
+import com.company.ems.dto.UserDTO;
+import com.company.ems.model.User;
+import com.company.ems.repository.UserRepository;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
-    private final AuthenticationManager authenticationManager;
-    private final JwtTokenProvider jwtTokenProvider;
     private final UserRepository userRepository;
 
-    
-    public AuthController(AuthenticationManager authenticationManager, JwtTokenProvider jwtTokenProvider,
-			UserRepository userRepository) {
-		super();
-		this.authenticationManager = authenticationManager;
-		this.jwtTokenProvider = jwtTokenProvider;
-		this.userRepository = userRepository;
-	}
-
-	@PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        Authentication authentication = authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
-        );
-        User user = userRepository.findByUsername(request.getUsername()).orElseThrow();
-        String token = jwtTokenProvider.generateToken(authentication);
-        return ResponseEntity.ok(new JwtResponse(token, user.getRole().name()));
+    public AuthController(UserRepository userRepository) {
+        this.userRepository = userRepository;
     }
 
-    // Optional: open registration endpoint (disable for prod, use admin for user creation)
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+        Optional<User> userOpt = userRepository.findByUsername(request.getUsername());
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            // Plaintext password check!
+            if (user.getPassword().equals(request.getPassword())) {
+                return ResponseEntity.ok(Map.of(
+                    "username", user.getUsername(),
+                    "role", user.getRole().name()
+                ));
+            }
+        }
+        // For debug, you can print but it's optional
+        System.out.println("USERNAME: " + request.getUsername());
+        System.out.println("PASSWORD: " + request.getPassword());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid username or password");
+    }
+
+    // Open registration endpoint (for dev/demo)
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody UserDTO dto) {
         if (userRepository.findByUsername(dto.getUsername()).isPresent()) {
@@ -44,7 +51,7 @@ public class AuthController {
         }
         User user = new User();
         user.setUsername(dto.getUsername());
-        user.setPassword(new BCryptPasswordEncoder().encode(dto.getPassword()));
+        user.setPassword(dto.getPassword()); // <-- Plain text
         user.setFullName(dto.getFullName());
         user.setRole(dto.getRole());
         userRepository.save(user);
